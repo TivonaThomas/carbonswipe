@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wallet - Carbon Swipe</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="styles.css" rel="stylesheet">
+    <!-- Web3.js and Ethers.js -->
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.5.2/dist/web3.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ethers/dist/ethers.umd.min.js"></script>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-3 col-lg-2 sidebar">
+                <h4 class="mb-4 text-center">Dashboard</h4>
+                <nav>
+                    <a href="dashboard.html"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+                    <a href="profile.html"><i class="fas fa-user"></i> Profile</a>
+                    <a href="map.html"><i class="fas fa-map"></i> Map</a>
+                    <a href="about.html"><i class="fas fa-info-circle"></i> About</a>
+                    <a href="index.html"><i class="fas fa-sign-out-alt"></i> Log Out</a>
+                </nav>
+            </div>
+            <div class="col-md-9 col-lg-10 p-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2>Wallet</h2>
+                    <div class="logo">
+                        <img src="images/logo.svg" alt="Carbon Swipe Logo" style="height: 50px;">
+                    </div>
+                </div>
+                <div class="wallet-container">
+                    <div class="wallet-balance mb-4">
+                        <h3>Current Balance</h3>
+                        <h2 class="balance">100Credits</h2>
+                        <p>≈ Carbon Credit Tokens 0</p>
+                        <div class="metamask-section mt-4">
+                            <button id="connectEthers" class="btn btn-secondary">
+                                <img src="https://raw.githubusercontent.com/MetaMask/brand-resources/master/SVG/metamask-fox.svg" alt="MetaMask" style="height: 25px; margin-right: 10px;">
+                                Connect with Ethers.js
+                            </button>
+                            <button id="disconnectEthers" class="btn btn-danger" style="display: none;">
+                                <i class="fas fa-sign-out-alt"></i> Disconnect
+                            </button>
+                            <p id="ethersWalletAddress" class="mt-2 text-muted" style="display: none;">
+                                Connected: <span></span>
+                            </p>
+                            <!-- Claim Tokens button (Initially hidden) -->
+                            <button id="claimTokens" class="btn btn-primary" style="display: none;">
+                                Claim Carbon Swipe Tokens
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        let userAddress = null;
+        let provider = null;
+        let contract = null;
+        const contractAddress = "0xD1fE5aC48beF4355F6F93B2A59F5Ea3D9bc7f0e0"; // Replace with your contract address
+        const contractABI = [
+            {
+                "inputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "credits",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "claimTokens",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            }
+        ];
+
+        document.getElementById('connectEthers').addEventListener('click', async () => {
+            if (typeof window.ethereum !== 'undefined') {
+                try {
+                    // Request account access
+                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+
+                    const address = accounts[0];
+
+                    // Update UI with the address
+                    document.getElementById('ethersWalletAddress').style.display = 'block';
+                    document.getElementById('ethersWalletAddress').querySelector('span').textContent = `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+
+                    // Set user address
+                    userAddress = address;
+
+                    const connectButton = document.getElementById('connectEthers');
+                    const disconnectButton = document.getElementById('disconnectEthers');
+                    
+                    connectButton.classList.remove('btn-secondary');
+                    connectButton.classList.add('btn-success');
+                    connectButton.innerHTML = '<i class="fas fa-check-circle"></i> Connected to MetaMask';
+
+                    // Show the disconnect button
+                    disconnectButton.style.display = 'inline-block';
+                    connectButton.style.display = 'none';
+
+                    // Enable Claim Tokens button
+                    document.getElementById('claimTokens').style.display = 'inline-block';
+
+                    // Create a Web3Provider from ethers.js
+                    provider = new ethers.providers.Web3Provider(window.ethereum);
+
+                    // Create a signer (user's wallet)
+                    const signer = provider.getSigner();
+
+                    // Create contract instance
+                    contract = new ethers.Contract(contractAddress, contractABI, signer);
+
+                } catch (error) {
+                    console.error('Error connecting:', error);
+                    alert(`Error: ${error.message}`);
+                }
+            } else {
+                alert('MetaMask is not installed. Please install MetaMask to continue.');
+                window.open('https://metamask.io/download.html', '_blank');
+            }
+        });
+
+        document.getElementById('disconnectEthers').addEventListener('click', () => {
+            // Hide wallet address and reset the UI
+            document.getElementById('ethersWalletAddress').style.display = 'none';
+            document.getElementById('ethersWalletAddress').querySelector('span').textContent = '';
+
+            const connectButton = document.getElementById('connectEthers');
+            const disconnectButton = document.getElementById('disconnectEthers');
+
+            // Reset the connect button
+            connectButton.classList.remove('btn-success');
+            connectButton.classList.add('btn-secondary');
+            connectButton.innerHTML = '<img src="https://raw.githubusercontent.com/MetaMask/brand-resources/master/SVG/metamask-fox.svg" alt="MetaMask" style="height: 25px; margin-right: 10px;"> Connect with Ethers.js';
+
+            // Hide the disconnect button
+            disconnectButton.style.display = 'none';
+            connectButton.style.display = 'inline-block';
+
+            // Hide the Claim Tokens button
+            document.getElementById('claimTokens').style.display = 'none';
+        });
+
+        // Claim tokens function
+        document.getElementById('claimTokens').addEventListener('click', async () => {
+            if (!userAddress || !contract) {
+                alert("Please connect your wallet first.");
+                return;
+            }
+
+            try {
+                const credits = 100; // Example credits value; adjust as needed
+                const tx = await contract.claimTokens(credits); // Call the smart contract function
+                console.log("Transaction submitted:", tx);
+                await tx.wait(); // Wait for the transaction to be mined
+
+                alert("Claim successful! Carbon Swipe tokens have been sent to your wallet.");
+            } catch (error) {
+                console.error("Error claiming tokens:", error);
+                alert(`Error: ${error.message}`);
+            }
+        });
+    </script>
+</body>
+</html>
